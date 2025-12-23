@@ -1,0 +1,15 @@
+[Unit]
+Description=Loan App (uvicorn)
+After=network.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/loan-app/backend
+EnvironmentFile=/etc/loan_app.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/loan-app/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

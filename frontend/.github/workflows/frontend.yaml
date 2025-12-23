@@ -11,18 +11,33 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Deploy to EC2
+    - name: Deploy frontend to EC2
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.EC2_HOST }}
-        username: ec2-user
+        username: ubuntu
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          cd loan-app/frontend
-          git pull origin main
-          # Replace the placeholder API URL with the real one from secrets (if provided)
+          set -euo pipefail
+          sudo mkdir -p /opt/loan-app
+          sudo chown ubuntu:ubuntu /opt/loan-app
+          cd /opt/loan-app
+
+          # Clone or update repo
+          if [ -d .git ]; then
+            git pull origin main
+          else
+            git clone https://github.com/Abhi-04-04/Nav_tech.git .
+          fi
+
+          cd frontend
           if [ -n "${{ secrets.API_URL }}" ]; then
             sed -i "s|http://YOUR_EC2_PUBLIC_IP:8000|${{ secrets.API_URL }}|g" index.html || true
           fi
-          # Restart or reload webserver if needed (depends on your server)
+
+          sudo mkdir -p /var/www/loan-frontend
+          sudo cp -r ./* /var/www/loan-frontend/
+          sudo chown -R www-data:www-data /var/www/loan-frontend
+          # Reload nginx to pick up new files
+          sudo systemctl restart nginx || true
           echo "Frontend deployed"

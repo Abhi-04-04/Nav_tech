@@ -21,23 +21,70 @@ jobs:
       run: |
         pip install -r backend/requirements.txt
 
-    - name: Deploy to EC2
+    - name: Deploy to EC2 (full)
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.EC2_HOST }}
-        username: ec2-user
+        username: ubuntu
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          cd loan-app/backend
-          git pull origin main
-          pip install -r requirements.txt
-          # Ensure DATABASE_URL is exported if provided
-          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
-            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+          set -euo pipefail
+          # Prepare app directory
+          sudo mkdir -p /opt/loan-app
+          sudo chown ubuntu:ubuntu /opt/loan-app
+          cd /opt/loan-app
+
+          # Clone or update repo
+          if [ -d .git ]; then
+            git pull origin main
+          else
+            git clone https://github.com/Abhi-04-04/Nav_tech.git .
           fi
-          # Simple dev start (recommend using systemd or supervisor for production)
-          pkill -f "uvicorn app.main:app" || true
-          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > uvicorn.log 2>&1 &
-          # Smoke test the API
+
+          # Backend setup
+          cd backend
+          python3 -m venv .venv || true
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+          # Write env file (DATABASE_URL) if provided
+          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+            echo "DATABASE_URL='${{ secrets.DATABASE_URL }}'" | sudo tee /etc/loan_app.env > /dev/null
+            sudo chmod 600 /etc/loan_app.env
+          fi
+
+          # Inject API_URL into frontend index.html if provided
+          cd ../frontend
+          if [ -n "${{ secrets.API_URL }}" ]; then
+            sed -i "s|http://YOUR_EC2_PUBLIC_IP:8000|${{ secrets.API_URL }}|g" index.html || true
+          fi
+
+          # Deploy frontend static files
+          sudo mkdir -p /var/www/loan-frontend
+          sudo cp -r ./* /var/www/loan-frontend/
+          sudo chown -R www-data:www-data /var/www/loan-frontend
+
+          # Install nginx and configure
+          sudo apt update
+          sudo apt install -y nginx
+          sudo rm -f /etc/nginx/sites-enabled/default || true
+          sudo tee /etc/nginx/sites-available/loan-app > /dev/null <<'NGINX_CONF'
+$(sed 's/$/\n/' ../../deploy/loan-app.nginx)
+NGINX_CONF
+          sudo ln -sf /etc/nginx/sites-available/loan-app /etc/nginx/sites-enabled/loan-app
+          sudo nginx -t
+          sudo systemctl restart nginx
+
+          # Install systemd service for backend
+          sudo tee /etc/systemd/system/loan-app.service > /dev/null <<'SERVICE'
+$(sed 's/$/\n/' ../../deploy/loan-app.service)
+SERVICE
+          sudo systemctl daemon-reload
+          sudo systemctl enable --now loan-app
+
+          # Check service status and run smoke test
           sleep 2
+          sudo systemctl status loan-app --no-pager || true
           curl -s -f http://127.0.0.1:8000/customers || (echo "Smoke test failed" && exit 1)
+          echo "Deploy succeeded"
