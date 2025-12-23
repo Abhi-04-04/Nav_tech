@@ -122,7 +122,14 @@ sudo systemctl enable --now loan-app || true
 
 # Smoke test
 sleep 2
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/customers || echo "000")
+# Temporarily relax errexit to capture curl exit code safely
+set +e
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/customers)
+CURL_EXIT=$?
+set -e
+if [[ "$CURL_EXIT" -ne 0 && -z "$HTTP_CODE" ]]; then
+  HTTP_CODE="000"
+fi
 if [[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "503" ]]; then
   echo "Smoke test passed (status $HTTP_CODE)"
 else
