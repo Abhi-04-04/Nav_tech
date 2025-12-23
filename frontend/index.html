@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Loan Payment UI</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Loan Payment Portal</h1>
+
+  <section>
+    <h2>Customers</h2>
+    <div id="customers">Loading...</div>
+  </section>
+
+  <section>
+    <h2>Make EMI Payment</h2>
+    <div class="form-row">
+      <input id="account" placeholder="Account number" />
+      <input id="amount" placeholder="Amount" type="number" />
+      <button id="payBtn">Pay EMI</button>
+    </div>
+    <div id="message" role="status" aria-live="polite"></div>
+  </section>
+
+  <script>
+    // Set API URL via env placeholder (updated in deployment or overridden)
+    window.API_URL = window.API_URL || "http://localhost:8000";
+  </script>
+  <script src="script.js"></script>
+</body>
+</html>

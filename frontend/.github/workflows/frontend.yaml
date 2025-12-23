@@ -1,0 +1,28 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ec2-user
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          cd loan-app/frontend
+          git pull origin main
+          # Replace the placeholder API URL with the real one from secrets (if provided)
+          if [ -n "${{ secrets.API_URL }}" ]; then
+            sed -i "s|http://YOUR_EC2_PUBLIC_IP:8000|${{ secrets.API_URL }}|g" index.html || true
+          fi
+          # Restart or reload webserver if needed (depends on your server)
+          echo "Frontend deployed"

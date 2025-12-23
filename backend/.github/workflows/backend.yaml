@@ -1,0 +1,43 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        pip install -r backend/requirements.txt
+
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ec2-user
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          cd loan-app/backend
+          git pull origin main
+          pip install -r requirements.txt
+          # Ensure DATABASE_URL is exported if provided
+          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+          fi
+          # Simple dev start (recommend using systemd or supervisor for production)
+          pkill -f "uvicorn app.main:app" || true
+          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > uvicorn.log 2>&1 &
+          # Smoke test the API
+          sleep 2
+          curl -s -f http://127.0.0.1:8000/customers || (echo "Smoke test failed" && exit 1)
