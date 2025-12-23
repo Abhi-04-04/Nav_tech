@@ -79,7 +79,7 @@ if [ -n "$DATABASE_URL" ]; then
   sudo chmod 600 /etc/loan_app.env
 fi
 
-# Frontend setup and API injection
+# Frontend setup and API injection (static web)
 cd ../frontend
 if [ -n "$API_URL" ]; then
   sed -i "s|http://YOUR_EC2_PUBLIC_IP:8000|$API_URL|g" index.html || true
@@ -94,6 +94,25 @@ elif id -u nginx >/dev/null 2>&1; then
   sudo chown -R nginx:nginx /var/www/loan-frontend
 else
   sudo chown -R $USER:$USER /var/www/loan-frontend
+fi
+
+# Streamlit setup
+cd ../
+if [ -d frontend_streamlit ]; then
+  # Install streamlit into backend venv
+  cd backend
+  source .venv/bin/activate
+  pip install --upgrade streamlit requests
+  cd ../
+  sudo mkdir -p /opt/loan-app/frontend_streamlit
+  sudo cp -r frontend_streamlit/* /opt/loan-app/frontend_streamlit/
+  sudo chown -R $USER:$USER /opt/loan-app/frontend_streamlit
+  # Install service
+  sudo cp deploy/streamlit-app.service /etc/systemd/system/streamlit-app.service
+  sudo sed -i "s/^User=.*$/User=$USER/" /etc/systemd/system/streamlit-app.service || true
+  sudo sed -i "s/^Group=.*$/Group=$USER/" /etc/systemd/system/streamlit-app.service || true
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now streamlit-app || true
 fi
 
 # Install and configure nginx using available package manager

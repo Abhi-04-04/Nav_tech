@@ -1,0 +1,15 @@
+[Unit]
+Description=Streamlit App
+After=network.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/loan-app
+EnvironmentFile=/etc/loan_app.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/loan-app/backend/.venv/bin/streamlit run /opt/loan-app/frontend_streamlit/streamlit_app.py --server.port 8501 --server.headless true
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
