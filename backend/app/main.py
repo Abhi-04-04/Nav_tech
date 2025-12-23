@@ -23,6 +23,12 @@ app.add_middleware(
 @app.on_event("startup")
 def startup_event():
     # Create tables if they don't exist (convenience for local dev)
-    Base.metadata.create_all(bind=engine)
+    # If the database is unreachable (e.g., external DB not provisioned yet),
+    # don't let the entire app fail at startup — log and continue.
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as exc:  # broad catch to avoid startup failure in deployment
+        import logging
+        logging.warning("Database unavailable at startup, continuing without creating tables: %s", exc)
 
 app.include_router(router)
