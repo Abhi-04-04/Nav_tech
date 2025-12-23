@@ -1,11 +1,15 @@
-# Frontend (Simple HTML + JS)
+# Frontend (Simple HTML + JS) 🎨
 
-This frontend is a plain HTML/JavaScript app that talks to the backend API.
+A minimal static frontend that calls the backend API to show customers and submit payments.
 
-Run locally:
+Run locally
 
-1. Open `index.html` in a browser (no build step required).
-2. Ensure `window.API_URL` points to your backend (default `http://localhost:8000`).
+1. Open `index.html` in your browser (no build required).
+2. Make sure `window.API_URL` points to your backend (default `http://localhost:8000`). You can set this directly in `script.js` or let the deploy replace it automatically.
 
-Deploy notes:
-- CI sets `API_URL` on the deployed server using a small sed replacement in the GitHub Action.
+Deploy notes
+- The deploy CI replaces `window.API_URL` with your production API URL during deployment.
+- For a richer user interface, see the Streamlit app in `frontend_streamlit/` (run with `streamlit run frontend_streamlit/streamlit_app.py`).
+
+Troubleshooting
+- If API calls fail, check the browser console for network errors and confirm `API_URL` is correct.
