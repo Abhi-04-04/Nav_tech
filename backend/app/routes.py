@@ -31,15 +31,22 @@ class PaymentIn(BaseModel):
 @router.get("/customers")
 def get_customers(db: Session = Depends(get_db)):
     """Retrieve all customers."""
-    return db.query(Customer).all()
+    try:
+        return db.query(Customer).all()
+    except Exception:
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
 
 @router.post("/payments")
 def make_payment(payment_in: PaymentIn, db: Session = Depends(get_db)):
     """Make an EMI payment."""
-    customer = db.query(Customer).filter_by(
-        account_number=payment_in.account_number
-    ).first()
+    try:
+        customer = db.query(Customer).filter_by(
+            account_number=payment_in.account_number
+        ).first()
+    except Exception:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
 
@@ -62,11 +69,18 @@ def make_payment(payment_in: PaymentIn, db: Session = Depends(get_db)):
 @router.get("/payments/{account_number}")
 def get_payments(account_number: str, db: Session = Depends(get_db)):
     """Retrieve payment history."""
-    customer = db.query(Customer).filter_by(
-        account_number=account_number
-    ).first()
+    try:
+        customer = db.query(Customer).filter_by(
+            account_number=account_number
+        ).first()
+    except Exception:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
-    return db.query(Payment).filter_by(
-        customer_id=customer.id
-    ).all()
+    try:
+        return db.query(Payment).filter_by(
+            customer_id=customer.id
+        ).all()
+    except Exception:
+        raise HTTPException(status_code=503, detail="Database unavailable")
